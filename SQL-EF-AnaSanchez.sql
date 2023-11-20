@@ -86,18 +86,6 @@ GROUP BY c.customer_id, c.first_name, c.last_name; -- agrupo por id del cliente 
  
  /* 12. Encuentra el promedio de duración de las películas para cada 
  clasificación de la tabla film y muestra la clasificación junto con el promedio de duración.*/
-
- -- Me doy cuenta repasando de que lo que me piden puede ser categoría o rating, incluyo ambas
- -- categoría -----------------------------------------------------------------
-SELECT ca.`name` as Nombre_categoria, AVG(`length`) AS media_duracion
-FROM film AS fi
-INNER JOIN film_category AS fc
-ON fi.film_id = fc.film_id
-INNER JOIN category AS ca
-ON fc.category_id = ca.category_id
-GROUP BY ca.`name`; -- agrupo por categoría
-
--- rating -----------------------------------------------------------------
 SELECT rating, AVG(`length`) AS media_duracion
 FROM film
 GROUP BY rating; -- Agrupo por rating
@@ -127,7 +115,7 @@ LEFT JOIN film_actor AS fa
 ON ac.actor_id = fa.actor_id
 WHERE fa.film_id IS NULL; 
 -- El resultado está vacío porque no hay ningún null en film_id, es decir, todos los actores está asociados a alguna película
-
+-- Uso left join porque quiero todos los actores, estén asociados a una peli o no, si usase inner join solo me daría los coincidentes con film_actor
 
 -- 16. Encuentra el título de todas las películas que fueron lanzadas entre el año 2005 y 2010.
 SELECT title, release_year AS Año_lanzamiento
@@ -176,7 +164,21 @@ WHERE rating = 'R' AND `length`> 120; -- Condición para filtrar, Incluyo ambas 
  ON fc.film_id = fi.film_id
  GROUP BY ca.`name`
  HAVING media_duracion > 120;
- -- Uno las tablas que necesito, agrupo por categoría y calculo la media de duración de las categorías con una media superior a 2 horas
+-- Uno las tablas que necesito, agrupo por categoría y calculo la media de duración de las categorías con una media superior a 2 horas 
+ 
+ -- CTE --------------------------------------------------------
+ WITH cat_promedio AS (
+						SELECT ca.`name` AS categoria, AVG(fi.`length`) AS media_duracion
+						FROM category AS ca
+						INNER JOIN film_category AS fc 
+						ON ca.category_id = fc.category_id
+						INNER JOIN film AS fi 
+						ON fc.film_id = fi.film_id
+						GROUP BY ca.`name`)
+SELECT * 
+FROM cat_promedio
+WHERE media_duracion > 120;
+ -- Primero hago el ejercicio de unir las tablas que necesito y agrupar por nombre de categoría y después lo meto en una cte
  
  
  /* 21. Encuentra los actores que han actuado en al menos 5 películas
@@ -203,6 +205,7 @@ INNER JOIN rental AS re
 ON inv.inventory_id = re.inventory_id
 WHERE fi.rental_duration > 5
 GROUP BY fi.title, fi.rental_duration;
+-- Uno todas las tablas de las que necesito información y después filtro por duración y agrupo por titulo y duración del alquiler
 
 -- --------------------- subconsulta ------------------
 SELECT title
@@ -214,24 +217,11 @@ WHERE film_id IN (SELECT fi.film_id
 					INNER JOIN rental AS re
 					ON inv.inventory_id = re.inventory_id
 					WHERE fi.rental_duration > 5);
-
+-- Uso el código de arriba y lo meto en la subconsulta simplificado, ya que ahora en la consulta selecciono el título y en la subconsulta especifico la condición
 
 /* 23. Encuentra el nombre y apellido de los actores que no han actuado en ninguna película 
 de la categoría "Horror". Utiliza una subconsulta para encontrar los actores que han actuado 
 en películas de la categoría "Horror" y luego exclúyelos de la lista de actores.*/
-SELECT ac.first_name AS nombre, ac.last_name as APELLIDO, ca.`name`AS categoria
-FROM actor AS ac
-INNER JOIN film_actor AS fa
-ON ac.actor_id = fa.actor_id
-INNER JOIN film AS fi
-ON fa.film_id = fi.film_id
-INNER JOIN film_category AS fc
-ON fi.film_id = fc.film_id
-INNER JOIN category AS ca
-ON fc.category_id = ca.category_id
-WHERE NOT ca.`name`= 'Horror';
-
--- --------------------- subconsulta ------------------
 SELECT ac.first_name AS nombre, ac.last_name AS apellido
 FROM actor AS ac
 WHERE ac.actor_id NOT IN (
@@ -244,7 +234,8 @@ WHERE ac.actor_id NOT IN (
 						INNER JOIN category AS ca 
 						ON fc.category_id = ca.category_id
 						WHERE ca.`name` = 'Horror');
- 
+-- primero uno todas las tablas de las que necesito información y establezco la condición de 'horror' en nombre de categoría
+-- lo meto en una subconsulta y en la condición especifico lo que no quiero en vez de lo que si para que lo excluya
 
 /*24. BONUS: Encuentra el título de las películas que son comedias y
 tienen una duración mayor a 180 minutos en la tabla film.*/
@@ -255,7 +246,7 @@ ON fi.film_id = fc.film_id
 INNER JOIN category AS ca
 ON fc.category_id = ca.category_id
 WHERE ca.`name` = 'Comedy' AND fi.`length` > 180;
--- Uno las tablas que necesito e incluyo en la condición los dos requisitos para que me devuelva çunicamente lo que pido
+-- Uno las tablas que necesito e incluyo en la condición los dos requisitos para que me devuelva unicamente lo que pido
 
 
 /* 25. BONUS: Encuentra todos los actores que han actuado juntos en al menos una película. 
